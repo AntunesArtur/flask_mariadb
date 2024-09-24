@@ -1,0 +1,86 @@
+name: Deploy to EC2
+
+on:
+  workflow_dispatch:
+    inputs:
+        logLevel:
+          description: 'Escolha a nuvem'
+          required: true
+          default: 'aws'
+          type: choice
+          options:
+            - aws
+            - azure
+            - google
+            - oracle
+
+        descricao:
+          description: 'Descricao'
+          required: true
+          type: string
+
+        logico:
+          description: 'Sim ou Nao - hfhdhfh'
+          required: true
+          type: boolean
+
+        ambiente:
+          description: 'Qual o ambiente de trabalho'
+          required: true
+          type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    if: ${{ inputs.logLevel == 'aws' }}
+
+    steps:
+      # Passo 1: Check out do repositório
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      # Passo 2: Configurar chave SSH
+      - name: Set up SSH key
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" > ec2-key.pem
+          chmod 400 ec2-key.pem
+
+      # Passo 3: Conectar à EC2 e executar o docker-compose
+      - name: Deploy containers on EC2
+        run: |
+          ssh -i ec2-key.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            # Atualizar pacotes
+            sudo yum update -y
+
+            # Instalar Docker e Docker Compose se não estiverem instalados
+            if ! [ -x "$(command -v docker)" ]; then
+              sudo amazon-linux-extras install docker -y
+            fi
+
+            if ! [ -x "$(command -v docker-compose)" ]; then
+              sudo yum install -y docker-compose
+            fi
+
+            # Iniciar o serviço Docker
+            sudo systemctl start docker
+            sudo systemctl enable docker
+
+            # Criar diretório para a aplicação se não existir
+            if [ ! -d "flask_mariadb" ]; then
+              git clone ${{ secrets.REPOSITORIO }}
+            else
+              cd flask_mariadb && git pull origin main
+            fi
+
+            cd flask_mariadb            
+
+            # Iniciar os containers com docker-compose
+            sudo docker-compose up -d
+
+            # Aguardar um momento para garantir que o MariaDB esteja em execução
+            sleep 10
+
+            # Conectar ao MariaDB e criar a tabela 'users'            
+            sudo docker exec -it "${{ secrets.CONTAINER_NAME }}" mysql -uuser -ppassword mydb -e "CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL);"
+          EOF
