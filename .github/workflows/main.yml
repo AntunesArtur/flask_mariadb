@@ -3,31 +3,31 @@ name: Deploy to EC2
 on:
   workflow_dispatch:
     inputs:
-        logLevel:
-          description: 'Escolha a nuvem'
-          required: true
-          default: 'aws'
-          type: choice
-          options:
-            - aws
-            - azure
-            - google
-            - oracle
+      logLevel:
+        description: 'Escolha a nuvem'
+        required: true
+        default: 'aws'
+        type: choice
+        options:
+          - aws
+          - azure
+          - google
+          - oracle
 
-        descricao:
-          description: 'Descricao'
-          required: true
-          type: string
+      descricao:
+        description: 'Descricao'
+        required: true
+        type: string
 
-        logico:
-          description: 'Sim ou Nao - hfhdhfh'
-          required: true
-          type: boolean
+      logico:
+        description: 'Sim ou Nao - hfhdhfh'
+        required: true
+        type: boolean
 
-        ambiente:
-          description: 'Qual o ambiente de trabalho'
-          required: true
-          type: string
+      ambiente:
+        description: 'Qual o ambiente de trabalho'
+        required: true
+        type: string
 
 jobs:
   deploy:
@@ -53,18 +53,18 @@ jobs:
             # Atualizar pacotes
             sudo yum update -y
 
-            # Instalar Docker e Docker Compose se não estiverem instalados
+            # Instalar Docker e iniciar o serviço
             if ! [ -x "$(command -v docker)" ]; then
               sudo amazon-linux-extras install docker -y
+              sudo systemctl start docker
+              sudo systemctl enable docker
             fi
 
+            # Instalar Docker Compose se não estiver instalado
             if ! [ -x "$(command -v docker-compose)" ]; then
-              sudo yum install -y docker-compose
+              sudo yum install -y python3-pip
+              sudo pip3 install docker-compose
             fi
-
-            # Iniciar o serviço Docker
-            sudo systemctl start docker
-            sudo systemctl enable docker
 
             # Criar diretório para a aplicação se não existir
             if [ ! -d "flask_mariadb" ]; then
@@ -73,7 +73,7 @@ jobs:
               cd flask_mariadb && git pull origin main
             fi
 
-            cd flask_mariadb            
+            cd flask_mariadb
 
             # Iniciar os containers com docker-compose
             sudo docker-compose up -d
@@ -82,5 +82,6 @@ jobs:
             sleep 10
 
             # Conectar ao MariaDB e criar a tabela 'users'            
-            sudo docker exec -it "${{ secrets.CONTAINER_NAME }}" mysql -uuser -ppassword mydb -e "CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL);"
+            CONTAINER_NAME="${{ secrets.CONTAINER_NAME }}"
+            sudo docker exec -it "$CONTAINER_NAME" mysql -uuser -ppassword mydb -e "CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL);"
           EOF
