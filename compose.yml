@@ -1,0 +1,32 @@
+
+version: '3'
+
+services:
+  db:
+    image: mariadb:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: Abcd1234
+      MYSQL_DATABASE: mydb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql  # Volume para dados
+      - db_logs:/var/log/mysql   # Volume para logs (opcional, o caminho pode variar conforme a configuração)
+
+  web:
+    build: ./app
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_HOST=db
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_NAME=mydb
+    depends_on:
+      - db
+
+volumes:
+  db_data:  # Persistência dos dados do banco
+  db_logs:  # Persistência dos logs do banco (se configurado)
