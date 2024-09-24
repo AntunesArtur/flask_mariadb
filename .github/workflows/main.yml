@@ -60,20 +60,25 @@ jobs:
               sudo systemctl enable docker
             fi
 
+            # Instalar pip se não estiver instalado
+            if ! [ -x "$(command -v pip3)" ]; then
+              sudo yum install -y python3-pip
+            fi
+
             # Instalar Docker Compose se não estiver instalado
             if ! [ -x "$(command -v docker-compose)" ]; then
-              sudo yum install -y python3-pip
               sudo pip3 install docker-compose
             fi
 
             # Criar diretório para a aplicação se não existir
             if [ ! -d "flask_mariadb" ]; then
               git clone ${{ secrets.REPOSITORIO }}
-            else
-              cd flask_mariadb && git pull origin main
             fi
 
-            cd flask_mariadb
+            cd flask_mariadb || { echo "Directory not found"; exit 1; }
+
+            # Puxar as últimas alterações do repositório
+            git pull origin main
 
             # Iniciar os containers com docker-compose
             sudo docker-compose up -d
