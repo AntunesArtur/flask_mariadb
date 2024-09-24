@@ -50,47 +50,46 @@ jobs:
       - name: Deploy containers on EC2
         run: |
           ssh -i ec2-key.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-            # Atualizar pacotes
-            sudo yum update -y
+          # Atualizar pacotes
+          sudo yum update -y
 
-            # Instalar Docker se não estiver instalado
-            if ! [ -x "$(command -v docker)" ]; then
-              sudo amazon-linux-extras install docker -y
-              sudo systemctl start docker
-              sudo systemctl enable docker
-            fi
+          # Instalar Docker se não estiver instalado
+          if ! [ -x "$(command -v docker)" ]; then
+            sudo amazon-linux-extras install docker -y
+            sudo systemctl start docker
+            sudo systemctl enable docker
+          fi
 
-            # Instalar pip se não estiver instalado
-            if ! [ -x "$(command -v pip3)" ]; then
-              sudo yum install -y python3-pip
-            fi
+          # Instalar pip se não estiver instalado
+          if ! [ -x "$(command -v pip3)" ]; then
+            sudo yum install -y python3-pip
+          fi
 
-            # Instalar Docker Compose como um plugin do Docker
-            if ! [ -x "$(command -v docker-compose)" ]; then
-              sudo pip3 install docker-compose
-              # Ou você pode optar por instalar a versão do binário diretamente
-              # sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-              # sudo chmod +x /usr/local/bin/docker-compose
-            fi
+          # Verificar se o docker compose está instalado
+          docker compose version || {
+            sudo pip3 install docker-compose
+          }
 
-            # Criar diretório para a aplicação se não existir
-            if [ ! -d "flask_mariadb" ]; then
-              git clone ${{ secrets.REPOSITORIO }}
-            fi
+          # Criar diretório para a aplicação se não existir
+          if [ ! -d "flask_mariadb" ]; then
+            git clone ${{ secrets.REPOSITORIO }}
+          fi
 
-            cd flask_mariadb || { echo "Directory not found"; exit 1; }
+          cd flask_mariadb || { echo "Directory not found"; exit 1; }
 
-            # Puxar as últimas alterações do repositório
-            git pull origin main
+          # Puxar as últimas alterações do repositório
+          git pull origin main
 
-            # Iniciar os containers com docker compose
-            sudo docker compose up -d
+          # Verificar contêineres em execução
+          sudo docker ps
 
-            # Aguardar um momento para garantir que o MariaDB esteja em execução
-            sleep 10
+          # Iniciar os containers com docker compose
+          sudo docker compose up -d
 
-            # Conectar ao MariaDB e criar a tabela 'users'            
-            CONTAINER_NAME="${{ secrets.CONTAINER_NAME }}"
-            sudo docker exec -it "$CONTAINER_NAME" mysql -uuser -ppassword mydb -e "CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL);"
-          EOF
+          # Aguardar um momento para garantir que o MariaDB esteja em execução
+          sleep 10
 
+          # Conectar ao MariaDB e criar a tabela 'users'            
+          CONTAINER_NAME="${{ secrets.CONTAINER_NAME }}"
+          sudo docker exec -it "$CONTAINER_NAME" mysql -uuser -ppassword mydb -e "CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL);"
+        EOF
