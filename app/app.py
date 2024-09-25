@@ -14,6 +14,10 @@ def get_db_connection():
     )
     return conn
 
+@app.route('/')
+def index():
+    return jsonify({'message': 'Welcome to the Flask APP!'})
+
 # Rota para adicionar um usuário no banco de dados
 @app.route('/add_user', methods=['POST'])
 def add_user():
