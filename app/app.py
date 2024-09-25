@@ -4,7 +4,14 @@ import mysql.connector
 import os
 
 app = Flask(__name__)
-swagger = Swagger(app)
+swagger = Swagger(app, 
+                  template={
+                      'info': {
+                          'title': 'API Title',
+                          'version': '1.0.0',
+                      },
+                      'schemes': ['http']  # ou ['https'] se estiver usando HTTPS
+                  })
 
 # Função para conectar ao banco de dados
 def get_db_connection():
