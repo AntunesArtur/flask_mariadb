@@ -10,7 +10,9 @@ def get_db_connection():
         host=os.getenv("DB_HOST"),
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME")
+        database=os.getenv("DB_NAME"),
+        charset='utf8mb4',
+        collation='utf8mb4_unicode_ci'
     )
     return conn
 
@@ -19,7 +21,7 @@ def index():
     return jsonify({'message': 'Welcome to the Flask APP!'})
 
 # Rota para adicionar um usuário no banco de dados
-@app.route('/add_user', methods=['POST'])
+
 def add_user():
     data = request.json
     name = data['name']
